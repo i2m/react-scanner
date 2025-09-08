@@ -18,14 +18,12 @@ export function TokensCacheProvider(props: React.PropsWithChildren) {
   );
 
   const updateToken = useCallback((token: TokenData) => {
-    const oldToken = tc.current.get(token.id);
-    tc.current.set(token.id, { ...(oldToken || {}), ...token });
+    tc.current.set(token.id, token);
   }, []);
 
   const bulkUpdateTokens = useCallback((tokens: TokenData[]) => {
     tokens.forEach((token) => {
-      const oldToken = tc.current.get(token.id);
-      tc.current.set(token.id, { ...(oldToken || {}), ...token });
+      tc.current.set(token.id, token);
     });
   }, []);
 

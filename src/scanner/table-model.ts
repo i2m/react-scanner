@@ -4,6 +4,7 @@ import type {
   PairStatsMsgData,
   ScannerPairsEventPayload,
   TickEventPayload,
+  TokenData,
 } from "./task-types";
 import { fetchTokens, scannerResultToTokenData } from "./api/rest";
 import { useTokensCache } from "./api/cache/tokens";
@@ -13,6 +14,14 @@ import { useTokensUpdates } from "./api/ws";
 export function useTableModel(initParams: GetScannerResultParams) {
   const [page, setPage] = useState(initParams.page || 1);
   const [params] = useState(initParams);
+  const [totalTokensCount, setTotalTokensCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const [rev, setRev] = useState(Date.now());
+  const [tokens, setTokens] = useState<{ rev: number; tokens: TokenData[] }>({
+    rev: rev,
+    tokens: [],
+  });
 
   const { updateToken, bulkUpdateTokens, getTokenById, removeTokenById } =
     useTokensCache();
@@ -28,28 +37,38 @@ export function useTableModel(initParams: GetScannerResultParams) {
 
   const fetchTokensOnPage = useCallback(
     (page: number, params: GetScannerResultParams) => {
-      fetchTokens({ ...params, page }).then((data) => {
-        bulkUpdateTokens(data.tokens);
-        updateTokensIdsOnPage(
-          data.tokens.map((t) => t.id),
-          page,
-        );
-        data.tokens.map((token) => {
-          const d = {
-            pair: token.pairAddress,
-            token: token.tokenAddress,
-            chain: token.chain,
-          };
-          subscribeToUpdates({
-            event: "subscribe-pair",
-            data: d,
+      setLoading(true);
+      fetchTokens({ ...params, page })
+        .then((data) => {
+          bulkUpdateTokens(data.tokens);
+          updateTokensIdsOnPage(
+            data.tokens.map((t) => t.id),
+            page,
+          );
+          setTotalTokensCount(data.totalRows);
+
+          setLoading(false);
+          setRev(Date.now());
+
+          data.tokens.forEach((token) => {
+            const d = {
+              pair: token.pairAddress,
+              token: token.tokenAddress,
+              chain: token.chain,
+            };
+            subscribeToUpdates({
+              event: "subscribe-pair",
+              data: d,
+            });
+            subscribeToUpdates({
+              event: "subscribe-pair-stats",
+              data: d,
+            });
           });
-          subscribeToUpdates({
-            event: "subscribe-pair-stats",
-            data: d,
-          });
+        })
+        .catch(() => {
+          setLoading(false);
         });
-      });
     },
     [bulkUpdateTokens, subscribeToUpdates, updateTokensIdsOnPage],
   );
@@ -96,6 +115,7 @@ export function useTableModel(initParams: GetScannerResultParams) {
               parseFloat(latestSwap.amountToken1 || "0"),
           });
         }
+        setRev(Date.now());
       }
     },
     [getTokenById, updateToken],
@@ -115,6 +135,7 @@ export function useTableModel(initParams: GetScannerResultParams) {
             contractVerified: token.audit.contractVerified || pair.isVerified,
           },
         });
+        setRev(Date.now());
       }
     },
     [getTokenById, updateToken],
@@ -172,6 +193,7 @@ export function useTableModel(initParams: GetScannerResultParams) {
           });
         });
         updateTokensIdsOnPage([...receivedIds.values()], page);
+        setRev(Date.now());
       }
     },
     [
@@ -198,10 +220,15 @@ export function useTableModel(initParams: GetScannerResultParams) {
     setHandleTickUpdate,
   ]);
 
-  const tokens = [...Array(page).keys()].flatMap((i) => {
-    const ids = getTokensIdsOnPage(i + 1);
-    return ids.map(getTokenById).filter((t) => t != null);
-  });
+  useEffect(() => {
+    const uniqIds = new Set(
+      [...Array(page).keys()].flatMap((i) => {
+        return getTokensIdsOnPage(i + 1);
+      }),
+    );
+    const tokens = [...uniqIds].map(getTokenById).filter((t) => t != null);
+    setTokens({ tokens, rev });
+  }, [getTokenById, getTokensIdsOnPage, page, rev]);
 
-  return { tokens, fetchNextPage };
+  return { tokens: tokens.tokens, totalTokensCount, fetchNextPage, loading };
 }

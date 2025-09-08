@@ -1,0 +1,22 @@
+.container {
+  height: 100vh;
+}
+
+.table {
+  tr {
+    td,
+    th {
+      text-align: right;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+  }
+
+  .price,
+  .name,
+  .exchange {
+    min-width: 160px;
+    max-width: 160px;
+  }
+}

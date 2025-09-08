@@ -10,9 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@heroui/react": "^2.8.3",
+    "@heroui/use-infinite-scroll": "^2.2.11",
+    "@tailwindcss/vite": "^4.1.13",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.23.12",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-use-websocket": "^4.13.0"
+    "tailwindcss": "^4.1.13"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

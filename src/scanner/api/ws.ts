@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from "react";
-import useWebSocket from "react-use-websocket";
 import { WSS_API_URL } from "./config";
 import type {
   IncomingWebSocketMessage,
@@ -15,6 +14,8 @@ import type {
 } from "../task-types";
 
 export function useTokensUpdates() {
+  const wsConn = useRef<WebSocket>(null);
+
   const handleTickUpdate = useRef<(data: TickEventPayload) => void>(() => {});
   const setHandleTickUpdate = useCallback(
     (fn: (data: TickEventPayload) => void) => {
@@ -43,11 +44,6 @@ export function useTokensUpdates() {
     [],
   );
 
-  const { lastJsonMessage, sendJsonMessage } =
-    useWebSocket<IncomingWebSocketMessage>(WSS_API_URL, {
-      heartbeat: true,
-    });
-
   const subscribeToUpdates = useCallback(
     (
       message:
@@ -55,9 +51,9 @@ export function useTokensUpdates() {
         | PairSubscriptionMessage
         | PairStatsSubscriptionMessage,
     ) => {
-      sendJsonMessage(message);
+      wsConn.current?.send(JSON.stringify(message));
     },
-    [sendJsonMessage],
+    [],
   );
 
   const unsubscribeFromUpdates = useCallback(
@@ -67,9 +63,9 @@ export function useTokensUpdates() {
         | PairUnsubscriptionMessage
         | PairStatsUnsubscriptionMessage,
     ) => {
-      sendJsonMessage(message);
+      wsConn.current?.send(JSON.stringify(message));
     },
-    [sendJsonMessage],
+    [],
   );
 
   const handleIncomingMessage = useCallback(
@@ -98,8 +94,14 @@ export function useTokensUpdates() {
   );
 
   useEffect(() => {
-    handleIncomingMessage(lastJsonMessage);
-  }, [handleIncomingMessage, lastJsonMessage]);
+    wsConn.current = new WebSocket(WSS_API_URL);
+    wsConn.current.onmessage = (event) => {
+      handleIncomingMessage(JSON.parse(event.data));
+    };
+    return () => {
+      wsConn.current?.close();
+    };
+  }, [handleIncomingMessage]);
 
   return {
     subscribeToUpdates,

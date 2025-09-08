@@ -1,14 +1,22 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  height: 100vh;
 }
 
-.container {
+.tables {
   display: flex;
   flex-direction: row;
-}
-.card {
-  padding: 2em;
+  height: 100%;
+  overflow: hidden;
+  gap: 0.5rem;
+
+  .trending-tokens {
+    flex-grow: 1;
+    width: 50%;
+  }
+
+  .new-tokens {
+    flex-grow: 1;
+    width: 50%;
+  }
 }
