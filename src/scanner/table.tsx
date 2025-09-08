@@ -95,14 +95,25 @@ export function ScannerTable({ filter }: TableProps) {
           <TableColumn>Sells</TableColumn>
           <TableColumn>Liquidity</TableColumn>
         </TableHeader>
-        <TableBody items={tokens}>
+        <TableBody
+          items={tokens}
+          emptyContent={
+            !loading && !hasMore ? (
+              <div className="flex w-full justify-center">
+                No tokens to display
+              </div>
+            ) : null
+          }
+        >
           {(token) => (
             <TableRow key={token.id}>
               <TableCell className="name">{`${token.tokenName}/${token.chain}`}</TableCell>
               <TableCell className="exchange" title={token.exchange}>
                 {token.exchange}
               </TableCell>
-              <TableCell className="price">{`$${token.priceUsd}`}</TableCell>
+              <TableCell className="price">
+                <PriceHighlighter id={token.id} value={`$${token.priceUsd}`} />
+              </TableCell>
               <TableCell>{`$${nf.format(token.mcap)}`}</TableCell>
               <TableCell>{`$${nf.format(token.volumeUsd)}`}</TableCell>
               <TableCell>{`${nf.format(token.priceChangePcs["5m"])}%`}</TableCell>
@@ -121,4 +132,33 @@ export function ScannerTable({ filter }: TableProps) {
       </Table>
     </div>
   );
+}
+
+function PriceHighlighter({ id, value }: { id: string; value: string }) {
+  const [prevValue, setPrevValue] = useState(value);
+  const [prevId, setPrevId] = useState(id);
+  const [style, setStyle] = useState("price-stable");
+
+  useEffect(() => {
+    setPrevValue(value);
+    setPrevId(id);
+  }, [id, value]);
+
+  useEffect(() => {
+    if (value < prevValue) {
+      setStyle("price-dec");
+    } else if (value > prevValue) {
+      setStyle("price-inc");
+    } else {
+      setStyle("price-stable");
+    }
+  }, [prevValue, value]);
+
+  useEffect(() => {
+    if (prevId !== id) {
+      setStyle("price-stable");
+    }
+  }, [prevId, id]);
+
+  return <span className={style}>{value}</span>;
 }

@@ -20,3 +20,33 @@
     max-width: 160px;
   }
 }
+
+.price-stable {
+  background-color: initial;
+}
+
+.price-inc {
+  animation: price-inc 0.5s ease-in;
+}
+
+@keyframes price-inc {
+  from {
+    background-color: var(--color-lime-200);
+  }
+  to {
+    background-color: initial;
+  }
+}
+
+.price-dec {
+  animation: price-dec 0.5s ease-in;
+}
+
+@keyframes price-dec {
+  from {
+    background-color: var(--color-red-200);
+  }
+  to {
+    background-color: initial;
+  }
+}
