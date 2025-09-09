@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Table,
   TableHeader,
@@ -130,7 +130,7 @@ export function ScannerTable({ filter: initFilter }: TableProps) {
           <TableColumn allowsSorting key="price24H">
             24h
           </TableColumn>
-          <TableColumn allowsSorting key="ageß">
+          <TableColumn allowsSorting key="age">
             Age
           </TableColumn>
           <TableColumn allowsSorting key="buys">

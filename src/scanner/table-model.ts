@@ -80,37 +80,38 @@ export function useTableModel(initFilter: GetScannerResultParams) {
   const handleTickUpdate = useCallback(
     (data: TickEventPayload): void => {
       const { pair, swaps } = data;
-      const latestSwap = swaps.filter((swap) => !swap.isOutlier).pop();
-      const soldToken = getTokenById(pair.token);
-      if (latestSwap && soldToken) {
+
+      const sw = swaps.filter((swap) => !swap.isOutlier);
+      const latestSwap = sw.pop();
+      const token = getTokenById(pair.pair);
+
+      if (latestSwap && token) {
         const newPrice = parseFloat(latestSwap.priceToken1Usd);
-        const totalSupply =
-          soldToken.token1TotalSupplyFormatted +
-          parseFloat(latestSwap.amountToken0 || "0");
+        const totalSupply = token.token1TotalSupplyFormatted;
         const newMarketCap = totalSupply * newPrice;
+
+        let isBuy = false;
+        let isSell = false;
+        const prevLatestSwap = sw.pop();
+        if (prevLatestSwap) {
+          isBuy = latestSwap.amountToken1 > prevLatestSwap.amountToken1;
+          isSell = !isBuy;
+        }
         updateToken({
-          ...soldToken,
+          ...token,
+          volumeUsd:
+            token.volumeUsd +
+            parseFloat(latestSwap.amountToken1 || "0") * newPrice,
           priceUsd: newPrice,
           mcap: newMarketCap,
           transactions: {
-            ...soldToken.transactions,
-            sells: soldToken.transactions.sells + 1,
+            ...token.transactions,
+            buys: isBuy ? token.transactions.buys + 1 : token.transactions.buys,
+            sells: isSell
+              ? token.transactions.sells + 1
+              : token.transactions.sells,
           },
-          token1TotalSupplyFormatted: totalSupply,
         });
-        const boughtToken = getTokenById(latestSwap.tokenInAddress);
-        if (boughtToken) {
-          updateToken({
-            ...boughtToken,
-            transactions: {
-              ...boughtToken.transactions,
-              buys: boughtToken.transactions.buys + 1,
-            },
-            token1TotalSupplyFormatted:
-              boughtToken.token1TotalSupplyFormatted -
-              parseFloat(latestSwap.amountToken1 || "0"),
-          });
-        }
         setRev(Date.now());
       }
     },
@@ -120,7 +121,7 @@ export function useTableModel(initFilter: GetScannerResultParams) {
   const handlePairStatsUpdate = useCallback(
     (data: PairStatsMsgData): void => {
       const { pair } = data;
-      const token = getTokenById(pair.token1Address);
+      const token = getTokenById(pair.pairAddress);
       if (token) {
         updateToken({
           ...token,
@@ -148,7 +149,7 @@ export function useTableModel(initFilter: GetScannerResultParams) {
       if (page) {
         const storedIds = new Set(getTokensIdsOnPage(page));
 
-        const receivedIds = new Set(pairs.map((p) => p.token1Address));
+        const receivedIds = new Set(pairs.map((p) => p.pairAddress));
         const removedIds = storedIds.difference(receivedIds);
         removedIds.forEach((id) => {
           const token = getTokenById(id);
@@ -171,7 +172,7 @@ export function useTableModel(initFilter: GetScannerResultParams) {
         });
         const newIds = receivedIds.difference(storedIds);
         newIds.forEach((id) => {
-          const pair = pairs.find((p) => p.token1Address === id)!;
+          const pair = pairs.find((p) => p.pairAddress === id)!;
           const token = scannerResultToTokenData(pair);
           updateToken(token);
           const d = {

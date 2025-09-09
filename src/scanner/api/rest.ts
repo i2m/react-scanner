@@ -53,7 +53,7 @@ export function scannerResultToTokenData(sr: ScannerResult): TokenData {
   }
 
   return {
-    id: sr.token1Address,
+    id: sr.pairAddress,
     tokenName: sr.token1Name,
     tokenSymbol: sr.token1Symbol,
     tokenAddress: sr.token1Address,
