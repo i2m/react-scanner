@@ -11,9 +11,9 @@ import { useTokensCache } from "./api/cache/tokens";
 import { usePagedTokensCache } from "./api/cache/paged-tokens";
 import { useTokensUpdates } from "./api/ws";
 
-export function useTableModel(initParams: GetScannerResultParams) {
-  const [page, setPage] = useState(initParams.page || 1);
-  const [params] = useState(initParams);
+export function useTableModel(initFilter: GetScannerResultParams) {
+  const [page, setPage] = useState(initFilter.page || 1);
+  const [filter, setFilter] = useState(initFilter);
   const [totalTokensCount, setTotalTokensCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +25,11 @@ export function useTableModel(initParams: GetScannerResultParams) {
 
   const { updateToken, bulkUpdateTokens, getTokenById, removeTokenById } =
     useTokensCache();
-  const { updateTokensIdsOnPage, getTokensIdsOnPage } = usePagedTokensCache();
+  const {
+    updateTokensIdsOnPage,
+    getTokensIdsOnPage,
+    clearCache: clearPagedTokensCache,
+  } = usePagedTokensCache();
 
   const {
     subscribeToUpdates,
@@ -72,14 +76,6 @@ export function useTableModel(initParams: GetScannerResultParams) {
     },
     [bulkUpdateTokens, subscribeToUpdates, updateTokensIdsOnPage],
   );
-
-  const fetchNextPage = useCallback(() => {
-    setPage((page) => page + 1);
-  }, []);
-
-  useEffect(() => {
-    fetchTokensOnPage(page, params);
-  }, [fetchTokensOnPage, page, params]);
 
   const handleTickUpdate = useCallback(
     (data: TickEventPayload): void => {
@@ -220,6 +216,33 @@ export function useTableModel(initParams: GetScannerResultParams) {
     setHandleTickUpdate,
   ]);
 
+  const fetchNextPage = useCallback(() => {
+    setPage((page) => page + 1);
+  }, []);
+
+  const changeRequestsFilter = useCallback(
+    (nextFilter: GetScannerResultParams) => {
+      unsubscribeFromUpdates({
+        event: "unsubscribe-scanner-filter",
+        data: filter,
+      });
+
+      setFilter(nextFilter);
+      setPage(1);
+      clearPagedTokensCache();
+
+      subscribeToUpdates({
+        event: "scanner-filter",
+        data: nextFilter,
+      });
+    },
+    [clearPagedTokensCache, filter, subscribeToUpdates, unsubscribeFromUpdates],
+  );
+
+  useEffect(() => {
+    fetchTokensOnPage(page, filter);
+  }, [fetchTokensOnPage, page, filter]);
+
   useEffect(() => {
     const uniqIds = new Set(
       [...Array(page).keys()].flatMap((i) => {
@@ -230,5 +253,11 @@ export function useTableModel(initParams: GetScannerResultParams) {
     setTokens({ tokens, rev });
   }, [getTokenById, getTokensIdsOnPage, page, rev]);
 
-  return { tokens: tokens.tokens, totalTokensCount, fetchNextPage, loading };
+  return {
+    tokens: tokens.tokens,
+    totalTokensCount,
+    fetchNextPage,
+    changeRequestsFilter,
+    loading,
+  };
 }

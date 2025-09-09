@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { WSS_API_URL } from "./config";
 import type {
   IncomingWebSocketMessage,
@@ -51,7 +51,9 @@ export function useTokensUpdates() {
         | PairSubscriptionMessage
         | PairStatsSubscriptionMessage,
     ) => {
-      wsConn.current?.send(JSON.stringify(message));
+      if (wsConn.current?.readyState === WebSocket.OPEN) {
+        wsConn.current?.send(JSON.stringify(message));
+      }
     },
     [],
   );
@@ -63,7 +65,9 @@ export function useTokensUpdates() {
         | PairUnsubscriptionMessage
         | PairStatsUnsubscriptionMessage,
     ) => {
-      wsConn.current?.send(JSON.stringify(message));
+      if (wsConn.current?.readyState === WebSocket.OPEN) {
+        wsConn.current?.send(JSON.stringify(message));
+      }
     },
     [],
   );

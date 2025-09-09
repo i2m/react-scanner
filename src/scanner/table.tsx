@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Table,
   TableHeader,
@@ -6,11 +6,12 @@ import {
   TableColumn,
   TableRow,
   TableCell,
+  type SortDescriptor,
 } from "@heroui/table";
 import { useInfiniteScroll } from "@heroui/use-infinite-scroll";
 import { formatDistanceToNowStrict } from "date-fns";
 import { useTableModel } from "./table-model";
-import type { GetScannerResultParams } from "./task-types";
+import type { GetScannerResultParams, SerdeRankBy } from "./task-types";
 import "./table.css";
 import { Spinner } from "@heroui/react";
 
@@ -27,11 +28,23 @@ const nf = new Intl.NumberFormat("en-US", {
 interface TableProps {
   filter: GetScannerResultParams;
 }
-export function ScannerTable({ filter }: TableProps) {
+export function ScannerTable({ filter: initFilter }: TableProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
-  const { tokens, totalTokensCount, fetchNextPage, loading } =
-    useTableModel(filter);
+
+  const [filter, setFilter] = useState(initFilter);
+  const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
+    column: filter.rankBy!,
+    direction: filter.orderBy === "asc" ? "ascending" : "descending",
+  });
+
+  const {
+    tokens,
+    totalTokensCount,
+    fetchNextPage,
+    changeRequestsFilter,
+    loading,
+  } = useTableModel(filter);
 
   const loadMore = useCallback(() => {
     if (loading) {
@@ -54,6 +67,19 @@ export function ScannerTable({ filter }: TableProps) {
         .firstElementChild as HTMLElement;
     }
   }, [scrollerRef, tokens.length, totalTokensCount]);
+
+  useEffect(() => {
+    changeRequestsFilter(filter);
+  }, [changeRequestsFilter, filter]);
+
+  const sort = useCallback((sortDescriptor: SortDescriptor) => {
+    setFilter((filter) => ({
+      ...filter,
+      orderBy: sortDescriptor.direction === "ascending" ? "asc" : "desc",
+      rankBy: sortDescriptor.column as SerdeRankBy,
+    }));
+    setSortDescriptor(sortDescriptor);
+  }, []);
 
   return (
     <div className="container" ref={containerRef}>
@@ -79,21 +105,43 @@ export function ScannerTable({ filter }: TableProps) {
           containerRef.current?.clientHeight || DEFAULT_TABLE_HEIGHT
         }
         rowHeight={DEFAULT_TABLE_ROW_HEIGHT}
+        sortDescriptor={sortDescriptor}
+        onSortChange={sort}
       >
         <TableHeader>
           <TableColumn className="name">Token</TableColumn>
           <TableColumn className="exchange">Exchange</TableColumn>
           <TableColumn className="price">Price</TableColumn>
-          <TableColumn>Marketcap</TableColumn>
-          <TableColumn>Volume</TableColumn>
-          <TableColumn>5m</TableColumn>
-          <TableColumn>1h</TableColumn>
-          <TableColumn>6h</TableColumn>
-          <TableColumn>24h</TableColumn>
-          <TableColumn>Age</TableColumn>
-          <TableColumn>Buys</TableColumn>
-          <TableColumn>Sells</TableColumn>
-          <TableColumn>Liquidity</TableColumn>
+          <TableColumn allowsSorting key="mcap">
+            Marketcap
+          </TableColumn>
+          <TableColumn allowsSorting key="volume">
+            Volume
+          </TableColumn>
+          <TableColumn allowsSorting key="price5M">
+            5m
+          </TableColumn>
+          <TableColumn allowsSorting key="price1H">
+            1h
+          </TableColumn>
+          <TableColumn allowsSorting key="price6H">
+            6h
+          </TableColumn>
+          <TableColumn allowsSorting key="price24H">
+            24h
+          </TableColumn>
+          <TableColumn allowsSorting key="ageß">
+            Age
+          </TableColumn>
+          <TableColumn allowsSorting key="buys">
+            Buys
+          </TableColumn>
+          <TableColumn allowsSorting key="sells">
+            Sells
+          </TableColumn>
+          <TableColumn allowsSorting key="liquidity">
+            Liquidity
+          </TableColumn>
         </TableHeader>
         <TableBody
           items={tokens}
@@ -107,7 +155,10 @@ export function ScannerTable({ filter }: TableProps) {
         >
           {(token) => (
             <TableRow key={token.id}>
-              <TableCell className="name">{`${token.tokenName}/${token.chain}`}</TableCell>
+              <TableCell
+                className="name"
+                title={`${token.tokenName}/${token.chain}`}
+              >{`${token.tokenName}/${token.chain}`}</TableCell>
               <TableCell className="exchange" title={token.exchange}>
                 {token.exchange}
               </TableCell>

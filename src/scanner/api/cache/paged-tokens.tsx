@@ -5,6 +5,7 @@ import type { TokenData } from "../../task-types";
 type PagedTokensCache = {
   getTokensIdsOnPage: (page: number) => Array<TokenData["id"]>;
   updateTokensIdsOnPage: (ids: Array<TokenData["id"]>, page: number) => void;
+  clearCache: () => void;
 };
 const PagedTokensCacheContext = createContext<PagedTokensCache | undefined>(
   undefined,
@@ -24,9 +25,13 @@ export function PagedTokensCacheProvider(props: React.PropsWithChildren) {
     [],
   );
 
+  const clearCache = useCallback(() => {
+    ptc.current.clear();
+  }, []);
+
   const value = useMemo(() => {
-    return { getTokensIdsOnPage, updateTokensIdsOnPage };
-  }, [getTokensIdsOnPage, updateTokensIdsOnPage]);
+    return { getTokensIdsOnPage, updateTokensIdsOnPage, clearCache };
+  }, [getTokensIdsOnPage, updateTokensIdsOnPage, clearCache]);
 
   return (
     <PagedTokensCacheContext.Provider value={value}>
