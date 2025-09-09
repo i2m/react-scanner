@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { WSS_API_URL } from "./config";
 import type {
   IncomingWebSocketMessage,
+  OutgoingWebSocketMessage,
   PairStatsMsgData,
   PairStatsSubscriptionMessage,
   PairStatsUnsubscriptionMessage,
@@ -15,6 +16,7 @@ import type {
 
 export function useTokensUpdates() {
   const wsConn = useRef<WebSocket>(null);
+  const messageQueue = useRef<OutgoingWebSocketMessage[]>([]);
 
   const handleTickUpdate = useRef<(data: TickEventPayload) => void>(() => {});
   const setHandleTickUpdate = useCallback(
@@ -53,6 +55,8 @@ export function useTokensUpdates() {
     ) => {
       if (wsConn.current?.readyState === WebSocket.OPEN) {
         wsConn.current?.send(JSON.stringify(message));
+      } else {
+        messageQueue.current.push(message);
       }
     },
     [],
@@ -67,6 +71,8 @@ export function useTokensUpdates() {
     ) => {
       if (wsConn.current?.readyState === WebSocket.OPEN) {
         wsConn.current?.send(JSON.stringify(message));
+      } else {
+        messageQueue.current.push(message);
       }
     },
     [],
@@ -99,6 +105,14 @@ export function useTokensUpdates() {
 
   useEffect(() => {
     wsConn.current = new WebSocket(WSS_API_URL);
+    wsConn.current.onopen = () => {
+      if (messageQueue.current.length !== 0) {
+        messageQueue.current.reverse().forEach((msg) => {
+          wsConn.current?.send(JSON.stringify(msg));
+        });
+        messageQueue.current.length = 0;
+      }
+    };
     wsConn.current.onmessage = (event) => {
       handleIncomingMessage(JSON.parse(event.data));
     };
