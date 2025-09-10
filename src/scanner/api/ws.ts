@@ -105,6 +105,10 @@ export function useTokensUpdates() {
 
   useEffect(() => {
     wsConn.current = new WebSocket(WSS_API_URL);
+
+    const HEARTBEAT_INTERVAL = 12000;
+    let intervalId: number;
+
     wsConn.current.onopen = () => {
       if (messageQueue.current.length !== 0) {
         messageQueue.current.reverse().forEach((msg) => {
@@ -112,12 +116,21 @@ export function useTokensUpdates() {
         });
         messageQueue.current.length = 0;
       }
+
+      intervalId = setInterval(() => {
+        wsConn.current?.send(
+          JSON.stringify({
+            event: "ping",
+          }),
+        );
+      }, HEARTBEAT_INTERVAL);
     };
     wsConn.current.onmessage = (event) => {
       handleIncomingMessage(JSON.parse(event.data));
     };
     return () => {
       wsConn.current?.close();
+      clearInterval(intervalId);
     };
   }, [handleIncomingMessage]);
 

@@ -33,7 +33,3 @@ server: {
 ## App simple dataflow scheme
 
 ![App schema!](./schema.excalidraw.svg "App schema")
-
-
-## Known issues
-(WebSocket Intergration): After couple of seconds server stop sending real-time data updates
