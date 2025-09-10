@@ -16,6 +16,7 @@ export function useTableModel(initFilter: GetScannerResultParams) {
   const [filter, setFilter] = useState(initFilter);
   const [totalTokensCount, setTotalTokensCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [rev, setRev] = useState(Date.now());
   const [tokens, setTokens] = useState<{ rev: number; tokens: TokenData[] }>({
@@ -70,7 +71,8 @@ export function useTableModel(initFilter: GetScannerResultParams) {
             });
           });
         })
-        .catch(() => {
+        .catch((err: Error) => {
+          setError(err.message);
           setLoading(false);
         });
     },
@@ -260,5 +262,6 @@ export function useTableModel(initFilter: GetScannerResultParams) {
     fetchNextPage,
     changeRequestsFilter,
     loading,
+    error,
   };
 }

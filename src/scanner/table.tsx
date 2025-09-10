@@ -18,6 +18,7 @@ import type {
 } from "./task-types";
 import "./table.css";
 import {
+  Alert,
   Checkbox,
   Select,
   SelectItem,
@@ -57,16 +58,17 @@ export function ScannerTable({ filter: initFilter }: TableProps) {
     fetchNextPage,
     changeRequestsFilter,
     loading,
+    error,
   } = useTableModel(filter);
 
   // ===== TABLE INFINITE PAGINATION =====
 
   const loadMore = useCallback(() => {
-    if (loading) {
+    if (loading || error) {
       return;
     }
     fetchNextPage();
-  }, [fetchNextPage, loading]);
+  }, [error, fetchNextPage, loading]);
 
   const [hasMore, setHasMore] = useState(false);
   const [loaderRef, scrollerRef] = useInfiniteScroll({
@@ -165,6 +167,12 @@ export function ScannerTable({ filter: initFilter }: TableProps) {
 
   return (
     <div className="container h-full flex flex-col">
+      {/* Error Alert */}
+      {error && (
+        <div className="w-full flex flex-row gap-1 my-4 mx-2">
+          <Alert color="danger" title={error} />
+        </div>
+      )}
       {/* Filters */}
       <div className="w-full flex flex-row gap-1 my-4 mx-2">
         <Select
@@ -232,7 +240,7 @@ export function ScannerTable({ filter: initFilter }: TableProps) {
           isHeaderSticky
           isVirtualized
           bottomContent={
-            hasMore ? (
+            hasMore && !error ? (
               <div
                 className="flex w-full justify-center"
                 ref={loaderRef as React.Ref<HTMLDivElement>}
